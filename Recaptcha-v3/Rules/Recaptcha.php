@@ -9,6 +9,8 @@ class Recaptcha implements Rule
 {
     const URL = 'https://www.google.com/recaptcha/api/siteverify';
 
+    public $errors = ['ReCaptcha error detected'];
+
     /**
      * Create a new rule instance.
      *
@@ -28,11 +30,19 @@ class Recaptcha implements Rule
      */
     public function passes($attribute, $value)
     {
-        return Http::post((static::URL)."?".http_build_query([
+        $response = Http::post((static::URL)."?".http_build_query([
             'secret' => config('services.recaptcha.secret'),
             'response' => $value,
             'remoteip' => request()->ip()
-        ]))->json()['success'];
+        ]))->json();
+
+        if ($response['success'] == false)
+		{
+			$this->errors = array_merge($this->errors, $response['error-codes']);
+			return false;
+		}
+
+        return true;
     }
 
     /**
@@ -42,6 +52,6 @@ class Recaptcha implements Rule
      */
     public function message()
     {
-        return 'The validation error message.';
+        return $this->errors;
     }
 }
